@@ -45,23 +45,56 @@
       min-height: 100vh;
     }
 
-    /* ── Header ──
-       NOTE: When embedding this page inside the SamBarbeau.github.io
-       React app (which already provides its own NavBar via HomeLayout),
-       remove the entire <header>…</header> block below, and remove the
-       `header { … }` rules in this stylesheet. The grid layout and
-       cards are self-contained and will render fine without it. */
-    header {
-      background: linear-gradient(135deg, var(--navy-darkest) 0%, var(--navy) 60%, var(--blue) 100%);
-      color: #fff;
-      padding: 22px 32px;
+    /* ── Site header (matches sambarbeau.com) ── */
+    header.site {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 1.75rem 1.5rem 1.25rem;
       display: flex;
       align-items: center;
-      gap: 16px;
-      box-shadow: 0 2px 10px rgba(8,47,73,.35);
+      justify-content: space-between;
+      border-bottom: 1px solid var(--slate-200);
+      font-family: ui-serif, Georgia, "Times New Roman", serif;
     }
-    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
-    header p  { font-size: .85rem; opacity: .82; margin-top: 3px; }
+    header.site .brand {
+      color: var(--navy);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+    header.site nav a {
+      margin-left: 1.25rem;
+      font-size: 0.95rem;
+      color: var(--slate-500);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 120ms ease, color 120ms ease;
+    }
+    header.site nav a:hover,
+    header.site nav a.active {
+      color: var(--navy);
+      border-bottom-color: var(--navy);
+    }
+    .page-title {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem 0;
+      font-family: ui-serif, Georgia, "Times New Roman", serif;
+    }
+    .page-title h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 .35rem;
+      color: var(--navy);
+    }
+    .page-title p {
+      font-size: 0.95rem;
+      color: var(--slate-500);
+      margin: 0;
+    }
 
     /* ── Layout ── */
     .main {
@@ -82,9 +115,11 @@
         overflow: visible;
       }
       .qr-stage { min-height: 180px; padding: 12px; }
-      header { padding: 16px 18px; }
-      header h1 { font-size: 1.2rem; }
-      header p { font-size: .78rem; }
+      header.site { padding: 1rem 1rem .8rem; }
+      header.site nav a { margin-left: .9rem; font-size: 0.88rem; }
+      .page-title { padding: .8rem 1rem 0; }
+      .page-title h1 { font-size: 1.25rem; }
+      .page-title p { font-size: .85rem; }
     }
 
     /* ── Cards ── */
@@ -384,12 +419,18 @@
      the SamBarbeau.github.io React app (the app's NavBar already
      covers branding/navigation).
      ============================================================ -->
-<header>
-  <div>
-    <h1>QR Code Generator</h1>
-    <p>Quick, customizable QR codes — design, preview, download.</p>
-  </div>
+<header class="site">
+  <a href="https://sambarbeau.com" class="brand">Sam Barbeau</a>
+  <nav>
+    <a href="https://sambarbeau.com">about</a>
+    <a href="https://sambarbeau.com/projects.html" class="active">projects</a>
+    <a href="https://sambarbeau.com/travel.html">travel</a>
+  </nav>
 </header>
+<div class="page-title">
+  <h1>qr code generator</h1>
+  <p>quick, customizable qr codes — design, preview, download.</p>
+</div>
 <!-- ====================== END STANDALONE HEADER ====================== -->
 
 <div class="main">

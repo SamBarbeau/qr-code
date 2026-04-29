@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Code Generator</title>
+  <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <style>
+    /* ─────────────────────────────────────────────────────────
+       Theme — matches SamBarbeau.github.io
+         primary  (cream)  #e7e5e4
+         secondary (navy)  #082f49
+         tertiary (blue)   #0369a1
+       ───────────────────────────────────────────────────────── */
+    :root {
+      --navy-darkest: #051a2c;
+      --navy:         #082f49;
+      --navy-mid:     #0c4a6e;
+      --blue:         #0369a1;
+      --blue-mid:     #0284c7;
+      --blue-light:   #38bdf8;
+      --sky-soft:     #e0f2fe;
+      --cream:        #e7e5e4;
+      --cream-soft:   #f5f4f1;
+      --crimson:      #991b1b;
+      --brick:        #b91c1c;
+      --white:        #FFFFFF;
+      --slate-50:     #f8fafc;
+      --slate-100:    #f1f5f9;
+      --slate-200:    #e2e8f0;
+      --slate-300:    #cbd5e1;
+      --slate-400:    #94a3b8;
+      --slate-500:    #64748b;
+      --slate-600:    #475569;
+      --slate-700:    #334155;
+      --slate-800:    #1e293b;
+      --slate-900:    #0f172a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--cream);
+      color: var(--slate-800);
+      min-height: 100vh;
+    }
+
+    /* ── Header ──
+       NOTE: When embedding this page inside the SamBarbeau.github.io
+       React app (which already provides its own NavBar via HomeLayout),
+       remove the entire <header>…</header> block below, and remove the
+       `header { … }` rules in this stylesheet. The grid layout and
+       cards are self-contained and will render fine without it. */
+    header {
+      background: linear-gradient(135deg, var(--navy-darkest) 0%, var(--navy) 60%, var(--blue) 100%);
+      color: #fff;
+      padding: 22px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 10px rgba(8,47,73,.35);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+    header p  { font-size: .85rem; opacity: .82; margin-top: 3px; }
+
+    /* ── Layout ── */
+    .main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 22px;
+      align-items: start;
+    }
+    @media (max-width: 820px) {
+      .main { grid-template-columns: 1fr; }
+      .preview-col { order: -1; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(15,23,42,.06);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-head {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-head h2 { font-size: .9rem; font-weight: 600; }
+    .card-head .icon {
+      width: 26px; height: 26px;
+      background: var(--sky-soft);
+      color: var(--navy);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .82rem;
+      flex-shrink: 0;
+    }
+    .card-body { padding: 18px; }
+
+    /* ── Form elements ── */
+    label.lbl {
+      display: block;
+      font-size: .73rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .text-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid var(--slate-200);
+      border-radius: 8px;
+      font-size: .92rem;
+      outline: none;
+      transition: border-color .15s;
+      color: var(--slate-800);
+    }
+    .text-input:focus { border-color: var(--blue); }
+    .text-input::placeholder { color: var(--slate-300); }
+
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid var(--slate-200);
+      border-radius: 7px;
+      font-size: .88rem;
+      outline: none;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color .15s;
+      color: var(--slate-800);
+    }
+    select:focus { border-color: var(--blue); }
+
+    /* ── Grid helpers ── */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .span2 { grid-column: 1 / -1; }
+    @media (max-width: 500px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--slate-200); margin: 16px 0; }
+
+    /* ── Section label ── */
+    .sec { font-size: .72rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+
+    /* ── Style pills ── */
+    .pills { display: flex; gap: 5px; flex-wrap: wrap; }
+    .pill {
+      padding: 5px 12px;
+      border: 2px solid var(--slate-200);
+      border-radius: 6px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--slate-600);
+      transition: all .13s;
+      line-height: 1.4;
+    }
+    .pill:hover { border-color: var(--blue-light); color: var(--blue); }
+    .pill.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+    /* ── Color picker ── */
+    .color-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 2px solid var(--slate-200);
+      border-radius: 7px;
+      transition: border-color .15s;
+    }
+    .color-wrap:focus-within { border-color: var(--blue); }
+    .color-wrap.disabled { opacity: .4; pointer-events: none; }
+    input[type="color"] {
+      width: 26px; height: 26px;
+      border: none; border-radius: 4px;
+      cursor: pointer; padding: 0;
+      background: none; flex-shrink: 0;
+    }
+    .hex-input {
+      font-size: .82rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--slate-700);
+      border: none; outline: none;
+      width: 72px; background: transparent;
+    }
+    .color-swatches { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+    .swatch {
+      width: 20px; height: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform .1s, border-color .1s;
+      flex-shrink: 0;
+    }
+    .swatch:hover { transform: scale(1.2); }
+    .swatch.on { border-color: var(--slate-700) !important; }
+    .swatch-white { border-color: var(--slate-200) !important; }
+
+    /* ── Range sliders ── */
+    .range-row { display: flex; align-items: center; gap: 10px; }
+    input[type="range"] { flex: 1; accent-color: var(--blue); cursor: pointer; }
+    .range-val { font-size: .82rem; font-weight: 700; color: var(--blue); min-width: 38px; text-align: right; }
+
+    /* ── Checkboxes ── */
+    .check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .check-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; flex-shrink: 0; }
+    .check-row span { font-size: .86rem; color: var(--slate-700); }
+
+    /* ── Logo upload zone ── */
+    .upload-zone {
+      border: 2px dashed var(--slate-300);
+      border-radius: 9px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all .15s;
+    }
+    .upload-zone:hover { border-color: var(--blue); background: var(--sky-soft); }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-text a { color: var(--blue); font-weight: 600; text-decoration: underline; }
+    .upload-text a:hover { color: var(--navy); }
+    .upload-text { font-size: .83rem; color: var(--slate-600); line-height: 1.6; }
+    .upload-text strong { color: var(--navy); }
+    .logo-thumb { width: 52px; height: 52px; object-fit: contain; border-radius: 6px; margin: 0 auto 8px; display: block; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: .88rem; font-weight: 600;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all .15s;
+      line-height: 1;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      color: #fff; width: 100%;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--navy-mid), var(--blue-mid));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(8,47,73,.3);
+    }
+    .btn-ghost {
+      background: #fff; color: var(--blue);
+      border-color: var(--blue); flex: 1;
+    }
+    .btn-ghost:hover { background: var(--sky-soft); }
+    .btn-outline {
+      background: transparent; color: var(--slate-600);
+      border-color: var(--slate-200);
+      font-size: .78rem; padding: 6px 12px;
+    }
+    .btn-outline:hover { border-color: var(--blue-light); color: var(--blue); background: var(--sky-soft); }
+    .btn-icon { padding: 6px 10px; font-size: .82rem; }
+    .dl-row { display: flex; gap: 7px; margin-top: 9px; }
+    .dl-row .btn { flex: 1; padding: 9px 8px; font-size: .8rem; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px;
+      background: var(--sky-soft);
+      border-radius: 7px;
+      margin-top: 12px;
+      font-size: .78rem;
+      color: var(--navy);
+      font-weight: 500;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+
+    /* ── Preview area ── */
+    .preview-col {
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+    }
+    .qr-stage {
+      display: flex; align-items: center; justify-content: center;
+      padding: 18px;
+      background: var(--slate-50);
+      border-radius: 10px;
+      min-height: 280px;
+      overflow: hidden;
+    }
+    /* Force the rendered QR canvas/SVG to scale down to fit the preview
+       card while preserving aspect ratio. The actual export still uses the
+       full canvas size selected by the user. */
+    #qr-mount { width: 100%; display: flex; justify-content: center; }
+    #qr-mount canvas, #qr-mount svg {
+      max-width: 100%;
+      height: auto !important;
+      display: block;
+    }
+    .qr-empty { text-align: center; color: var(--slate-300); }
+    .qr-empty-icon { font-size: 3rem; margin-bottom: 10px; }
+    .qr-empty p { font-size: .88rem; }
+
+    /* ── Presets panel ── */
+    .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+    /* ── Filename input ── */
+    .fname-wrap { display: flex; gap: 7px; align-items: center; }
+    .fname-wrap input { flex: 1; }
+    .fname-ext {
+      font-size: .8rem; color: var(--slate-500); font-weight: 600;
+      white-space: nowrap; background: var(--slate-100);
+      border: 2px solid var(--slate-200); border-radius: 6px;
+      padding: 8px 10px; font-family: monospace;
+    }
+
+    /* ── Tip callout ── */
+    .tip {
+      background: var(--sky-soft);
+      border-left: 3px solid var(--blue);
+      padding: 9px 13px;
+      border-radius: 0 7px 7px 0;
+      font-size: .78rem;
+      color: var(--navy);
+      line-height: 1.55;
+      margin-top: 10px;
+    }
+
+    /* ── Quick-fill chips ── */
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+    /* ── Fade in ── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp .25s ease; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: .76rem;
+      color: var(--slate-500);
+      border-top: 1px solid var(--slate-200);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     STANDALONE HEADER — remove this block when embedding inside
+     the SamBarbeau.github.io React app (the app's NavBar already
+     covers branding/navigation).
+     ============================================================ -->
+<header>
+  <div>
+    <h1>QR Code Generator</h1>
+    <p>Quick, customizable QR codes — design, preview, download.</p>
+  </div>
+</header>
+<!-- ====================== END STANDALONE HEADER ====================== -->
+
+<div class="main">
+
+  <!-- ══════════════ LEFT: CONTROLS ══════════════ -->
+  <div class="controls-col">
+
+    <!-- URL -->
+    <div class="card">
+      <div class="card-head"><div class="icon">🔗</div><h2>Link / Content</h2></div>
+      <div class="card-body">
+        <label class="lbl" for="qr-url">URL or text</label>
+        <div style="display:flex;gap:8px">
+          <input id="qr-url" class="text-input" type="text" placeholder="https://…" oninput="scheduleUpdate()" />
+          <button class="btn btn-outline btn-icon" title="Clear" onclick="clearUrl()">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Presets -->
+    <div class="card">
+      <div class="card-head"><div class="icon">⚡</div><h2>Quick Presets</h2></div>
+      <div class="card-body">
+        <div class="preset-grid">
+          <button class="btn btn-outline" onclick="applyPreset('classic')">Classic Black</button>
+          <button class="btn btn-outline" onclick="applyPreset('monoLight')">Mono Light</button>
+          <button class="btn btn-outline" onclick="applyPreset('monoDark')">Mono Dark</button>
+          <button class="btn btn-outline" onclick="applyPreset('navy')">Navy on Cream</button>
+          <button class="btn btn-outline" onclick="applyPreset('midnight')">Midnight</button>
+          <button class="btn btn-outline" onclick="applyPreset('ocean')">Ocean</button>
+          <button class="btn btn-outline" onclick="applyPreset('slate')">Slate</button>
+          <button class="btn btn-outline" onclick="applyPreset('paper')">Paper</button>
+          <button class="btn btn-outline" onclick="applyPreset('crimson')">Crimson</button>
+          <button class="btn btn-outline" onclick="applyPreset('brick')">Brick &amp; Cream</button>
+          <button class="btn btn-outline" onclick="applyPreset('steel')">Steel Gradient</button>
+          <button class="btn btn-outline" onclick="applyPreset('aqua')">Aqua Gradient</button>
+          <button class="btn btn-outline" onclick="applyPreset('dusk')">Dusk Gradient</button>
+          <button class="btn btn-outline" onclick="applyPreset('editorial')">Editorial</button>
+          <button class="btn btn-outline" onclick="applyPreset('dotsMin')">Minimal Dots</button>
+          <button class="btn btn-outline" onclick="applyPreset('transparent')">Transparent BG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dot & Corner Style -->
+    <div class="card">
+      <div class="card-head"><div class="icon">✦</div><h2>Shape &amp; Style</h2></div>
+      <div class="card-body">
+        <div class="sec">Dot Shape</div>
+        <div class="pills" id="pills-dot">
+          <button class="pill on" data-v="square"          onclick="setPill('pills-dot',this);scheduleUpdate()">Square</button>
+          <button class="pill"    data-v="rounded"         onclick="setPill('pills-dot',this);scheduleUpdate()">Rounded</button>
+          <button class="pill"    data-v="dots"            onclick="setPill('pills-dot',this);scheduleUpdate()">Dots</button>
+          <button class="pill"    data-v="extra-rounded"   onclick="setPill('pills-dot',this);scheduleUpdate()">Extra Rounded</button>
+          <button class="pill"    data-v="classy"          onclick="setPill('pills-dot',this);scheduleUpdate()">Classy</button>
+          <button class="pill"    data-v="classy-rounded"  onclick="setPill('pills-dot',this);scheduleUpdate()">Classy Rounded</button>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec">Corner Square Style</div>
+        <div class="pills" id="pills-csq">
+          <button class="pill on" data-v="square"        onclick="setPill('pills-csq',this);scheduleUpdate()">Square</button>
+          <button class="pill"    data-v="extra-rounded" onclick="setPill('pills-csq',this);scheduleUpdate()">Rounded</button>
+          <button class="pill"    data-v="dot"           onclick="setPill('pills-csq',this);scheduleUpdate()">Dot</button>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec">Corner Dot Style</div>
+        <div class="pills" id="pills-cdot">
+          <button class="pill on" data-v="square" onclick="setPill('pills-cdot',this);scheduleUpdate()">Square</button>
+          <button class="pill"    data-v="dot"    onclick="setPill('pills-cdot',this);scheduleUpdate()">Dot</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div class="card">
+      <div class="card-head"><div class="icon">🎨</div><h2>Colors</h2></div>
+      <div class="card-body">
+        <div class="g2">
+          <div>
+            <label class="lbl">Dot Color</label>
+            <div class="color-wrap">
+              <input type="color" id="dot-color" value="#082F49" oninput="syncHex(this,'dot-hex');scheduleUpdate()" />
+              <input type="text"  id="dot-hex"   class="hex-input" value="#082F49" maxlength="7" oninput="syncPicker(this,'dot-color');scheduleUpdate()" />
+            </div>
+            <div class="color-swatches" id="sw-dot"></div>
+          </div>
+          <div>
+            <label class="lbl">Background</label>
+            <div class="color-wrap" id="bg-color-wrap">
+              <input type="color" id="bg-color" value="#FFFFFF" oninput="syncHex(this,'bg-hex');scheduleUpdate()" />
+              <input type="text"  id="bg-hex"   class="hex-input" value="#FFFFFF" maxlength="7" oninput="syncPicker(this,'bg-color');scheduleUpdate()" />
+            </div>
+            <div style="margin-top:6px">
+              <label class="check-row">
+                <input type="checkbox" id="transparent-bg" onchange="onTransparentBg()" />
+                <span>Transparent background</span>
+              </label>
+            </div>
+            <div class="color-swatches" id="sw-bg"></div>
+          </div>
+          <div>
+            <label class="lbl">Corner Color</label>
+            <div class="color-wrap">
+              <input type="color" id="csq-color" value="#082F49" oninput="syncHex(this,'csq-hex');scheduleUpdate()" />
+              <input type="text"  id="csq-hex"   class="hex-input" value="#082F49" maxlength="7" oninput="syncPicker(this,'csq-color');scheduleUpdate()" />
+            </div>
+            <div class="color-swatches" id="sw-csq"></div>
+          </div>
+          <div>
+            <label class="lbl">Corner Dot Color</label>
+            <div class="color-wrap">
+              <input type="color" id="cdot-color" value="#0369A1" oninput="syncHex(this,'cdot-hex');scheduleUpdate()" />
+              <input type="text"  id="cdot-hex"   class="hex-input" value="#0369A1" maxlength="7" oninput="syncPicker(this,'cdot-color');scheduleUpdate()" />
+            </div>
+            <div class="color-swatches" id="sw-cdot"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <label class="check-row" style="margin-bottom:12px">
+          <input type="checkbox" id="use-gradient" onchange="onGradientToggle()" />
+          <span>Gradient dots</span>
+        </label>
+        <div id="gradient-opts" style="display:none" class="g2">
+          <div>
+            <label class="lbl">Start Color</label>
+            <div class="color-wrap">
+              <input type="color" id="grad-start" value="#082F49" oninput="syncHex(this,'grad-start-hex');scheduleUpdate()" />
+              <input type="text"  id="grad-start-hex" class="hex-input" value="#082F49" maxlength="7" oninput="syncPicker(this,'grad-start');scheduleUpdate()" />
+            </div>
+          </div>
+          <div>
+            <label class="lbl">End Color</label>
+            <div class="color-wrap">
+              <input type="color" id="grad-end" value="#0369A1" oninput="syncHex(this,'grad-end-hex');scheduleUpdate()" />
+              <input type="text"  id="grad-end-hex" class="hex-input" value="#0369A1" maxlength="7" oninput="syncPicker(this,'grad-end');scheduleUpdate()" />
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Type</label>
+            <select id="grad-type" onchange="scheduleUpdate()">
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Rotation (°)</label>
+            <div class="range-row">
+              <input type="range" id="grad-rot" min="0" max="360" step="15" value="45"
+                oninput="$('grad-rot-val').textContent=this.value+'°';scheduleUpdate()" />
+              <span class="range-val" id="grad-rot-val">45°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="card">
+      <div class="card-head"><div class="icon">🏷</div><h2>Logo / Image (optional)</h2></div>
+      <div class="card-body">
+        <label class="check-row" style="margin-bottom:14px">
+          <input type="checkbox" id="use-logo" onchange="onLogoToggle()" />
+          <span>Show logo in center</span>
+        </label>
+        <div id="logo-opts" style="display:none">
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('logo-file').click()">
+            <input type="file" id="logo-file" accept="image/*" onchange="onLogoUpload(event)" />
+            <div id="upload-content">
+              <div style="font-size:1.6rem;margin-bottom:6px">📁</div>
+              <div class="upload-text"><strong>Click to upload</strong><br/>PNG, JPG, or SVG<br/><small>Tip: keep error correction at H if you embed a logo</small></div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="g2">
+            <div>
+              <label class="lbl">Logo Size</label>
+              <div class="range-row">
+                <input type="range" id="logo-size" min="0.1" max="0.6" step="0.05" value="0.3"
+                  oninput="$('logo-size-val').textContent=Math.round(this.value*100)+'%';scheduleUpdate()" />
+                <span class="range-val" id="logo-size-val">30%</span>
+              </div>
+            </div>
+            <div>
+              <label class="lbl">Logo Margin</label>
+              <div class="range-row">
+                <input type="range" id="logo-margin" min="0" max="20" step="1" value="6"
+                  oninput="$('logo-margin-val').textContent=this.value+'px';scheduleUpdate()" />
+                <span class="range-val" id="logo-margin-val">6px</span>
+              </div>
+            </div>
+            <div class="span2">
+              <label class="check-row">
+                <input type="checkbox" id="hide-bg-dots" checked onchange="scheduleUpdate()" />
+                <span>Hide background dots behind logo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Size & Quality -->
+    <div class="card">
+      <div class="card-head"><div class="icon">⚙️</div><h2>Size &amp; Quality</h2></div>
+      <div class="card-body">
+        <div class="g2">
+          <div>
+            <label class="lbl">Canvas Size</label>
+            <div class="range-row">
+              <input type="range" id="qr-size" min="300" max="1000" step="50" value="500"
+                oninput="$('qr-size-val').textContent=this.value+'px';scheduleUpdate()" />
+              <span class="range-val" id="qr-size-val">500px</span>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Quiet Zone</label>
+            <div class="range-row">
+              <input type="range" id="qr-margin" min="0" max="60" step="4" value="16"
+                oninput="$('qr-margin-val').textContent=this.value+'px';scheduleUpdate()" />
+              <span class="range-val" id="qr-margin-val">16px</span>
+            </div>
+          </div>
+          <div class="span2">
+            <label class="lbl">Error Correction</label>
+            <select id="ecl" onchange="scheduleUpdate()">
+              <option value="L">L — Low (7%)</option>
+              <option value="M">M — Medium (15%)</option>
+              <option value="Q">Q — Quartile (25%)</option>
+              <option value="H" selected>H — High (30%)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /controls-col -->
+
+  <!-- ══════════════ RIGHT: PREVIEW ══════════════ -->
+  <div class="preview-col">
+
+    <!-- Preview card -->
+    <div class="card">
+      <div class="card-head">
+        <div class="icon">👁</div>
+        <h2>Preview</h2>
+        <button class="btn btn-outline btn-icon" style="margin-left:auto" onclick="resetAll()" title="Reset to defaults">↺ Reset</button>
+      </div>
+      <div class="card-body">
+        <div class="qr-stage" id="qr-stage">
+          <div id="qr-mount">
+            <div class="qr-empty">
+              <div class="qr-empty-icon">◻</div>
+              <p>Enter a URL above</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-bar" id="status-bar" style="display:none">
+          <div class="status-dot"></div>
+          <span id="status-text">Ready</span>
+        </div>
+
+        <div style="margin-top:16px">
+          <label class="lbl">Format</label>
+          <div class="pills" id="pills-fmt" style="margin-bottom:10px">
+            <button class="pill on" data-v="png"  onclick="setPill('pills-fmt',this)">PNG</button>
+            <button class="pill"    data-v="svg"  onclick="setPill('pills-fmt',this)">SVG</button>
+            <button class="pill"    data-v="jpeg" onclick="setPill('pills-fmt',this)">JPEG</button>
+            <button class="pill"    data-v="webp" onclick="setPill('pills-fmt',this)">WebP</button>
+          </div>
+          <button class="btn btn-primary" onclick="doDownload()">⬇&nbsp; Download QR Code</button>
+        </div>
+
+        <div class="divider"></div>
+        <label class="lbl">Filename</label>
+        <div class="fname-wrap">
+          <input id="filename" class="text-input" type="text" value="qr-code" placeholder="qr-code" style="font-family:monospace" />
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /preview-col -->
+
+</div><!-- /main -->
+
+<footer>&copy; <a href="https://sambarbeau.com" style="color:inherit;">Sam Barbeau</a> · MIT · Built with <a href="https://github.com/kozakdenys/qr-code-styling" style="color:inherit;">qr-code-styling</a></footer>
+
+<script>
+// ── Shorthand ──────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+// ── State ──────────────────────────────────────────────────
+let qrCode      = null;
+let logoDataUrl = null;       // active logo (only set if user uploads one)
+let updateTimer = null;
+
+// Curated palette: navy/blue, neutrals, cream, reds.
+const PALETTE = [
+  '#FFFFFF','#F5F4F1','#E7E5E4','#CBD5E1','#94A3B8','#475569','#1E293B','#0F172A','#000000',
+  '#082F49','#0C4A6E','#0369A1','#0284C7','#38BDF8','#E0F2FE',
+  '#991B1B','#B91C1C'
+];
+
+// ── Init ───────────────────────────────────────────────────
+function init() {
+  buildSwatches('sw-dot',  'dot-color',  'dot-hex');
+  buildSwatches('sw-bg',   'bg-color',   'bg-hex');
+  buildSwatches('sw-csq',  'csq-color',  'csq-hex');
+  buildSwatches('sw-cdot', 'cdot-color', 'cdot-hex');
+  applyPreset('navy');
+}
+
+function buildSwatches(containerId, pickerId, hexId) {
+  const el = $(containerId);
+  PALETTE.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'swatch' + (c === '#FFFFFF' ? ' swatch-white' : '');
+    btn.style.background = c;
+    btn.title = c;
+    btn.onclick = () => {
+      $(pickerId).value = c;
+      $(hexId).value = c.toUpperCase();
+      scheduleUpdate();
+    };
+    el.appendChild(btn);
+  });
+}
+
+// ── Color sync ─────────────────────────────────────────────
+function syncHex(picker, hexId) {
+  $(hexId).value = picker.value.toUpperCase();
+}
+function syncPicker(hexInput, pickerId) {
+  if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+    $(pickerId).value = hexInput.value;
+  }
+}
+
+// ── Pills ──────────────────────────────────────────────────
+function setPill(groupId, btn) {
+  document.querySelectorAll(`#${groupId} .pill`).forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+}
+function activePill(groupId) {
+  return document.querySelector(`#${groupId} .pill.on`)?.dataset.v ?? 'square';
+}
+
+// ── Transparent BG ─────────────────────────────────────────
+function onTransparentBg() {
+  $('bg-color-wrap').classList.toggle('disabled', $('transparent-bg').checked);
+  scheduleUpdate();
+}
+
+// ── Gradient ───────────────────────────────────────────────
+function onGradientToggle() {
+  $('gradient-opts').style.display = $('use-gradient').checked ? 'grid' : 'none';
+  scheduleUpdate();
+}
+
+// ── Logo ───────────────────────────────────────────────────
+function onLogoToggle() {
+  $('logo-opts').style.display = $('use-logo').checked ? '' : 'none';
+  scheduleUpdate();
+}
+function onLogoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    logoDataUrl = ev.target.result;
+    $('upload-content').innerHTML = `
+      <img src="${logoDataUrl}" class="logo-thumb" alt="logo preview" />
+      <div class="upload-text"><strong>${file.name}</strong><br/><small>Click to change · <a href="#" onclick="event.preventDefault();event.stopPropagation();clearLogo()">remove</a></small></div>`;
+    scheduleUpdate();
+  };
+  reader.readAsDataURL(file);
+}
+function clearLogo() {
+  logoDataUrl = null;
+  $('logo-file').value = '';
+  $('upload-content').innerHTML = `
+    <div style="font-size:1.6rem;margin-bottom:6px">📁</div>
+    <div class="upload-text"><strong>Click to upload</strong><br/>PNG, JPG, or SVG<br/><small>Tip: keep error correction at H if you embed a logo</small></div>`;
+  scheduleUpdate();
+}
+
+function clearUrl() {
+  $('qr-url').value = '';
+  scheduleUpdate();
+}
+
+// ── Debounce ───────────────────────────────────────────────
+function scheduleUpdate() {
+  clearTimeout(updateTimer);
+  updateTimer = setTimeout(generateQR, 180);
+}
+
+// ── Generate ───────────────────────────────────────────────
+function generateQR() {
+  const url = $('qr-url').value.trim();
+  const mount = $('qr-mount');
+
+  if (!url) {
+    mount.innerHTML = `<div class="qr-empty"><div class="qr-empty-icon">◻</div><p>Enter a URL above</p></div>`;
+    $('status-bar').style.display = 'none';
+    return;
+  }
+
+  const size          = parseInt($('qr-size').value);
+  const margin        = parseInt($('qr-margin').value);
+  const ecl           = $('ecl').value;
+  const useGrad       = $('use-gradient').checked;
+  const useLogo       = $('use-logo').checked;
+  const transparent   = $('transparent-bg').checked;
+
+  const dotColor      = $('dot-color').value;
+  const bgColor       = $('bg-color').value;
+  const csqColor      = $('csq-color').value;
+  const cdotColor     = $('cdot-color').value;
+  const gradStart     = $('grad-start').value;
+  const gradEnd       = $('grad-end').value;
+  const gradType      = $('grad-type').value;
+  const gradRotDeg    = parseFloat($('grad-rot').value);
+
+  const dotStyle      = activePill('pills-dot');
+  const csqStyle      = activePill('pills-csq');
+  const cdotStyle     = activePill('pills-cdot');
+
+  const logoSize      = parseFloat($('logo-size').value);
+  const logoMargin    = parseInt($('logo-margin').value);
+  const hideBgDots    = $('hide-bg-dots').checked;
+
+  const dotsOptions = useGrad ? {
+    type: dotStyle,
+    gradient: {
+      type: gradType,
+      rotation: gradRotDeg * Math.PI / 180,
+      colorStops: [
+        { offset: 0, color: gradStart },
+        { offset: 1, color: gradEnd }
+      ]
+    }
+  } : { type: dotStyle, color: dotColor };
+
+  const bgOptions = transparent ? { color: 'rgba(0,0,0,0)' } : { color: bgColor };
+
+  const opts = {
+    width: size,
+    height: size,
+    type: 'canvas',
+    data: url,
+    margin,
+    qrOptions:             { errorCorrectionLevel: ecl },
+    dotsOptions,
+    backgroundOptions:     bgOptions,
+    cornersSquareOptions:  { type: csqStyle,  color: csqColor  },
+    cornersDotOptions:     { type: cdotStyle, color: cdotColor },
+    imageOptions:          { hideBackgroundDots: hideBgDots, imageSize: logoSize, margin: logoMargin, crossOrigin: 'anonymous' }
+  };
+
+  if (useLogo && logoDataUrl) opts.image = logoDataUrl;
+
+  mount.innerHTML = '';
+  try {
+    qrCode = new QRCodeStyling(opts);
+    qrCode.append(mount);
+    mount.classList.add('fade-up');
+    setTimeout(() => mount.classList.remove('fade-up'), 300);
+
+    const short = url.length > 46 ? url.slice(0, 46) + '…' : url;
+    $('status-bar').style.display = 'flex';
+    $('status-text').textContent = `${short}`;
+  } catch (err) {
+    mount.innerHTML = `<div class="qr-empty"><p style="color:#dc2626;font-size:.82rem">Error: ${err.message}</p></div>`;
+  }
+}
+
+// ── Download ───────────────────────────────────────────────
+function doDownload() {
+  if (!qrCode) { alert('Enter a URL first to generate a QR code.'); return; }
+  const fmt  = activePill('pills-fmt') || 'png';
+  const name = $('filename').value.trim() || 'qr-code';
+  qrCode.download({ name, extension: fmt });
+}
+
+// ── Presets ────────────────────────────────────────────────
+// `useLogo` true/false sets the toggle; logo is only rendered if a file
+// has actually been uploaded by the user. omitted → leave toggle alone.
+const PRESETS = {
+  // ── Professional / classic ──
+  classic: {
+    dotStyle:'square', csqStyle:'square', cdotStyle:'square',
+    dotColor:'#000000', bgColor:'#FFFFFF', csqColor:'#000000', cdotColor:'#000000',
+    gradient:false, useLogo:false
+  },
+  monoLight: {
+    dotStyle:'dots', csqStyle:'square', cdotStyle:'dot',
+    dotColor:'#1E293B', bgColor:'#FFFFFF', csqColor:'#1E293B', cdotColor:'#1E293B',
+    gradient:false, useLogo:false
+  },
+  monoDark: {
+    dotStyle:'rounded', csqStyle:'square', cdotStyle:'square',
+    dotColor:'#E2E8F0', bgColor:'#0F172A', csqColor:'#E2E8F0', cdotColor:'#94A3B8',
+    gradient:false, useLogo:false
+  },
+  navy: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#082F49', bgColor:'#E7E5E4', csqColor:'#082F49', cdotColor:'#0369A1',
+    gradient:false, useLogo:false
+  },
+  midnight: {
+    dotStyle:'extra-rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#E0F2FE', bgColor:'#082F49', csqColor:'#38BDF8', cdotColor:'#E7E5E4',
+    gradient:false, useLogo:false
+  },
+  ocean: {
+    dotStyle:'extra-rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#0C4A6E', bgColor:'#FFFFFF', csqColor:'#082F49', cdotColor:'#0284C7',
+    gradient:false, useLogo:false
+  },
+  slate: {
+    dotStyle:'classy-rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#334155', bgColor:'#F5F4F1', csqColor:'#0F172A', cdotColor:'#475569',
+    gradient:false, useLogo:false
+  },
+  paper: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#1E293B', bgColor:'#E7E5E4', csqColor:'#0F172A', cdotColor:'#334155',
+    gradient:false, useLogo:false
+  },
+
+  // ── With a touch of red ──
+  crimson: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#991B1B', bgColor:'#F5F4F1', csqColor:'#7F1D1D', cdotColor:'#1E293B',
+    gradient:false, useLogo:false
+  },
+  brick: {
+    dotStyle:'classy-rounded', csqStyle:'square', cdotStyle:'dot',
+    dotColor:'#B91C1C', bgColor:'#E7E5E4', csqColor:'#1E293B', cdotColor:'#1E293B',
+    gradient:false, useLogo:false
+  },
+
+  // ── Soft gradients ──
+  steel: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#082F49', bgColor:'#FFFFFF', csqColor:'#082F49', cdotColor:'#0369A1',
+    gradient:true, gradStart:'#082F49', gradEnd:'#0369A1', gradType:'linear', gradRot:135,
+    useLogo:false
+  },
+  aqua: {
+    dotStyle:'extra-rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#0369A1', bgColor:'#FFFFFF', csqColor:'#0C4A6E', cdotColor:'#38BDF8',
+    gradient:true, gradStart:'#0369A1', gradEnd:'#38BDF8', gradType:'linear', gradRot:45,
+    useLogo:false
+  },
+  dusk: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#082F49', bgColor:'#F5F4F1', csqColor:'#082F49', cdotColor:'#991B1B',
+    gradient:true, gradStart:'#082F49', gradEnd:'#991B1B', gradType:'linear', gradRot:90,
+    useLogo:false
+  },
+
+  // ── Creative / detailed ──
+  editorial: {
+    dotStyle:'classy', csqStyle:'square', cdotStyle:'square',
+    dotColor:'#0F172A', bgColor:'#E7E5E4', csqColor:'#0F172A', cdotColor:'#0F172A',
+    gradient:false, useLogo:false
+  },
+  dotsMin: {
+    dotStyle:'dots', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#082F49', bgColor:'#FFFFFF', csqColor:'#082F49', cdotColor:'#0369A1',
+    gradient:false, useLogo:false
+  },
+
+  // ── Transparent ──
+  transparent: {
+    dotStyle:'rounded', csqStyle:'extra-rounded', cdotStyle:'dot',
+    dotColor:'#082F49', bgColor:'#FFFFFF', csqColor:'#082F49', cdotColor:'#0369A1',
+    gradient:false, useLogo:false, transparent:true
+  }
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+
+  // Pills
+  ['pills-dot','pills-csq','pills-cdot'].forEach(g => {
+    document.querySelectorAll(`#${g} .pill`).forEach(b => b.classList.remove('on'));
+  });
+  document.querySelector(`#pills-dot  .pill[data-v="${p.dotStyle}"]`)?.classList.add('on');
+  document.querySelector(`#pills-csq  .pill[data-v="${p.csqStyle}"]`)?.classList.add('on');
+  document.querySelector(`#pills-cdot .pill[data-v="${p.cdotStyle}"]`)?.classList.add('on');
+
+  // Colors
+  const setColor = (pickId, hexId, val) => {
+    $(pickId).value = val;
+    $(hexId).value  = val.toUpperCase();
+  };
+  setColor('dot-color',  'dot-hex',  p.dotColor);
+  setColor('bg-color',   'bg-hex',   p.bgColor);
+  setColor('csq-color',  'csq-hex',  p.csqColor);
+  setColor('cdot-color', 'cdot-hex', p.cdotColor);
+
+  // Gradient
+  $('use-gradient').checked = !!p.gradient;
+  onGradientToggle();
+  if (p.gradient) {
+    setColor('grad-start', 'grad-start-hex', p.gradStart);
+    setColor('grad-end',   'grad-end-hex',   p.gradEnd);
+    $('grad-type').value = p.gradType;
+    $('grad-rot').value  = p.gradRot ?? 45;
+    $('grad-rot-val').textContent = (p.gradRot ?? 45) + '°';
+  }
+
+  // Transparent bg
+  $('transparent-bg').checked = !!p.transparent;
+  $('bg-color-wrap').classList.toggle('disabled', !!p.transparent);
+
+  // Logo toggle (only if preset specifies)
+  if (typeof p.useLogo === 'boolean') {
+    $('use-logo').checked = p.useLogo;
+    onLogoToggle();
+  }
+
+  scheduleUpdate();
+}
+
+function resetAll() {
+  clearLogo();
+  $('use-logo').checked = false;
+  onLogoToggle();
+  // Reset format pill to PNG
+  document.querySelectorAll('#pills-fmt .pill').forEach(p => p.classList.remove('on'));
+  document.querySelector('#pills-fmt .pill[data-v="png"]')?.classList.add('on');
+  applyPreset('navy');
+}
+
+// ── Run ────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

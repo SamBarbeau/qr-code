@@ -74,8 +74,17 @@
       align-items: start;
     }
     @media (max-width: 820px) {
-      .main { grid-template-columns: 1fr; }
-      .preview-col { order: -1; }
+      .main { grid-template-columns: 1fr; padding: 14px 12px 32px; }
+      .preview-col {
+        order: -1;
+        position: static;
+        max-height: none;
+        overflow: visible;
+      }
+      .qr-stage { min-height: 180px; padding: 12px; }
+      header { padding: 16px 18px; }
+      header h1 { font-size: 1.2rem; }
+      header p { font-size: .78rem; }
     }
 
     /* ── Cards ── */
@@ -388,14 +397,25 @@
   <!-- ══════════════ LEFT: CONTROLS ══════════════ -->
   <div class="controls-col">
 
-    <!-- URL -->
+    <!-- Content -->
     <div class="card">
-      <div class="card-head"><div class="icon">🔗</div><h2>Link / Content</h2></div>
+      <div class="card-head"><div class="icon">🔗</div><h2>Content</h2></div>
       <div class="card-body">
-        <label class="lbl" for="qr-url">URL or text</label>
-        <div style="display:flex;gap:8px">
-          <input id="qr-url" class="text-input" type="text" placeholder="https://…" oninput="scheduleUpdate()" />
-          <button class="btn btn-outline btn-icon" title="Clear" onclick="clearUrl()">✕</button>
+        <label class="lbl" for="qr-type">Type</label>
+        <select id="qr-type" class="text-input" onchange="renderTypeFields()" style="margin-bottom:14px">
+          <option value="url">URL / Link</option>
+          <option value="text">Plain text</option>
+          <option value="email">Email</option>
+          <option value="phone">Phone number</option>
+          <option value="sms">SMS message</option>
+          <option value="wifi">WiFi network</option>
+          <option value="vcard">Contact (vCard)</option>
+          <option value="event">Calendar event</option>
+          <option value="geo">Geo location</option>
+        </select>
+        <div id="type-fields"><!-- populated by JS --></div>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end">
+          <button class="btn btn-outline btn-icon" title="Clear" onclick="clearContent()">✕ Clear</button>
         </div>
       </div>
     </div>
@@ -675,7 +695,124 @@
 // ── Shorthand ──────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-// ── State ──────────────────────────────────────────────────
+// ── Content type definitions ───────────────────────────────
+const QR_TYPES = {
+  url:   { fields: [{ id:'c-url', label:'URL', type:'text', placeholder:'https://...' }] },
+  text:  { fields: [{ id:'c-text', label:'Text', type:'textarea', placeholder:'any text' }] },
+  email: { fields: [
+    { id:'c-email-to',  label:'To',      type:'text',     placeholder:'name@example.com' },
+    { id:'c-email-sub', label:'Subject', type:'text',     placeholder:'(optional)' },
+    { id:'c-email-bod', label:'Body',    type:'textarea', placeholder:'(optional)' },
+  ]},
+  phone: { fields: [{ id:'c-phone', label:'Phone number', type:'tel', placeholder:'+15551234567' }] },
+  sms:   { fields: [
+    { id:'c-sms-to',  label:'Phone',   type:'tel',      placeholder:'+15551234567' },
+    { id:'c-sms-msg', label:'Message', type:'textarea', placeholder:'(optional)' },
+  ]},
+  wifi:  { fields: [
+    { id:'c-wifi-ssid', label:'Network name (SSID)', type:'text', placeholder:'MyNetwork' },
+    { id:'c-wifi-pass', label:'Password',            type:'text', placeholder:'' },
+    { id:'c-wifi-enc',  label:'Encryption',          type:'select', options:[['WPA','WPA / WPA2'],['WEP','WEP'],['nopass','None']] },
+  ]},
+  vcard: { fields: [
+    { id:'c-vc-name',  label:'Full name',  type:'text', placeholder:'Jane Doe' },
+    { id:'c-vc-org',   label:'Organization', type:'text', placeholder:'(optional)' },
+    { id:'c-vc-phone', label:'Phone',      type:'tel',  placeholder:'(optional)' },
+    { id:'c-vc-email', label:'Email',      type:'text', placeholder:'(optional)' },
+    { id:'c-vc-url',   label:'Website',    type:'text', placeholder:'(optional)' },
+  ]},
+  event: { fields: [
+    { id:'c-ev-title', label:'Title',    type:'text', placeholder:'My event' },
+    { id:'c-ev-loc',   label:'Location', type:'text', placeholder:'(optional)' },
+    { id:'c-ev-start', label:'Start',    type:'datetime-local' },
+    { id:'c-ev-end',   label:'End',      type:'datetime-local' },
+  ]},
+  geo:   { fields: [
+    { id:'c-geo-lat', label:'Latitude',  type:'text', placeholder:'40.7128' },
+    { id:'c-geo-lng', label:'Longitude', type:'text', placeholder:'-74.0060' },
+  ]},
+};
+
+function renderTypeFields() {
+  const type = $('qr-type').value;
+  const def = QR_TYPES[type];
+  const host = $('type-fields');
+  host.innerHTML = def.fields.map(f => {
+    const lbl = `<label class="lbl" for="${f.id}">${f.label}</label>`;
+    if (f.type === 'textarea') {
+      return `${lbl}<textarea id="${f.id}" class="text-input" rows="3" placeholder="${f.placeholder||''}" oninput="scheduleUpdate()" style="resize:vertical;font-family:inherit;width:100%"></textarea>`;
+    }
+    if (f.type === 'select') {
+      const opts = f.options.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+      return `${lbl}<select id="${f.id}" class="text-input" onchange="scheduleUpdate()">${opts}</select>`;
+    }
+    return `${lbl}<input id="${f.id}" class="text-input" type="${f.type}" placeholder="${f.placeholder||''}" oninput="scheduleUpdate()" />`;
+  }).join('<div style="height:10px"></div>');
+  scheduleUpdate();
+}
+
+// Escape \ ; , : " for WiFi / vCard format
+function escWifi(s) { return (s||'').replace(/([\\;,":])/g, '\\$1'); }
+function escVcard(s) { return (s||'').replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n'); }
+function fmtIcsDate(local) {
+  if (!local) return '';
+  // local is "YYYY-MM-DDTHH:MM"; treat as floating local time → strip punctuation, append no Z
+  return local.replace(/[-:]/g, '') + '00';
+}
+
+function buildQrData() {
+  const v = id => ($(id) ? $(id).value.trim() : '');
+  const type = $('qr-type') ? $('qr-type').value : 'url';
+  switch (type) {
+    case 'url':   return v('c-url');
+    case 'text':  return v('c-text');
+    case 'email': {
+      const to = v('c-email-to'); if (!to) return '';
+      const params = [];
+      if (v('c-email-sub')) params.push('subject=' + encodeURIComponent(v('c-email-sub')));
+      if (v('c-email-bod')) params.push('body=' + encodeURIComponent(v('c-email-bod')));
+      return `mailto:${to}` + (params.length ? '?' + params.join('&') : '');
+    }
+    case 'phone': return v('c-phone') ? `tel:${v('c-phone')}` : '';
+    case 'sms':   return v('c-sms-to') ? `SMSTO:${v('c-sms-to')}:${v('c-sms-msg')}` : '';
+    case 'wifi': {
+      const ssid = v('c-wifi-ssid'); if (!ssid) return '';
+      const enc  = v('c-wifi-enc') || 'WPA';
+      const pass = v('c-wifi-pass');
+      return `WIFI:T:${enc};S:${escWifi(ssid)};P:${escWifi(pass)};;`;
+    }
+    case 'vcard': {
+      const name = v('c-vc-name'); if (!name) return '';
+      const lines = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${escVcard(name)}`];
+      if (v('c-vc-org'))   lines.push(`ORG:${escVcard(v('c-vc-org'))}`);
+      if (v('c-vc-phone')) lines.push(`TEL:${v('c-vc-phone')}`);
+      if (v('c-vc-email')) lines.push(`EMAIL:${v('c-vc-email')}`);
+      if (v('c-vc-url'))   lines.push(`URL:${v('c-vc-url')}`);
+      lines.push('END:VCARD');
+      return lines.join('\n');
+    }
+    case 'event': {
+      const title = v('c-ev-title'); const start = v('c-ev-start'); const end = v('c-ev-end');
+      if (!title || !start || !end) return '';
+      const lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+        `SUMMARY:${escVcard(title)}`,
+        `DTSTART:${fmtIcsDate(start)}`,
+        `DTEND:${fmtIcsDate(end)}`,
+      ];
+      if (v('c-ev-loc')) lines.push(`LOCATION:${escVcard(v('c-ev-loc'))}`);
+      lines.push('END:VEVENT', 'END:VCALENDAR');
+      return lines.join('\n');
+    }
+    case 'geo':   {
+      const lat = v('c-geo-lat'); const lng = v('c-geo-lng');
+      return (lat && lng) ? `geo:${lat},${lng}` : '';
+    }
+  }
+  return '';
+}
+
+// State
 let qrCode      = null;
 let logoDataUrl = null;       // active logo (only set if user uploads one)
 let updateTimer = null;
@@ -693,6 +830,7 @@ function init() {
   buildSwatches('sw-bg',   'bg-color',   'bg-hex');
   buildSwatches('sw-csq',  'csq-color',  'csq-hex');
   buildSwatches('sw-cdot', 'cdot-color', 'cdot-hex');
+  renderTypeFields();
   applyPreset('navy');
 }
 
@@ -770,8 +908,9 @@ function clearLogo() {
   scheduleUpdate();
 }
 
-function clearUrl() {
-  $('qr-url').value = '';
+function clearContent() {
+  document.querySelectorAll('#type-fields input, #type-fields textarea, #type-fields select')
+    .forEach(el => { el.value = el.tagName === 'SELECT' ? el.options[0].value : ''; });
   scheduleUpdate();
 }
 
@@ -783,11 +922,11 @@ function scheduleUpdate() {
 
 // ── Generate ───────────────────────────────────────────────
 function generateQR() {
-  const url = $('qr-url').value.trim();
+  const url = buildQrData();
   const mount = $('qr-mount');
 
   if (!url) {
-    mount.innerHTML = `<div class="qr-empty"><div class="qr-empty-icon">◻</div><p>Enter a URL above</p></div>`;
+    mount.innerHTML = `<div class="qr-empty"><div class="qr-empty-icon">◻</div><p>Fill in the form above</p></div>`;
     $('status-bar').style.display = 'none';
     return;
   }

@@ -63,6 +63,13 @@
       letter-spacing: 0.02em;
       text-decoration: none;
       border-bottom: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+    }
+    header.site .brand img {
+      height: 32px;
+      width: auto;
+      display: block;
     }
     header.site nav a {
       margin-left: 1.25rem;
@@ -420,7 +427,7 @@
      covers branding/navigation).
      ============================================================ -->
 <header class="site">
-  <a href="https://sambarbeau.com" class="brand">Sam Barbeau</a>
+  <a href="https://sambarbeau.com" class="brand" aria-label="Sam Barbeau — home"><img src="img/page_logo.png" alt="Sam Barbeau"></a>
   <nav>
     <a href="https://sambarbeau.com">about</a>
     <a href="https://sambarbeau.com/projects.html" class="active">projects</a>

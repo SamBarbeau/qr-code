@@ -123,7 +123,7 @@
         max-height: none;
         overflow: visible;
       }
-      .qr-stage { min-height: 180px; padding: 12px; }
+      .qr-stage { min-height: 0; max-height: 220px; padding: 12px; }
       header.site { padding: 1rem 1rem .8rem; }
       header.site nav a { margin-left: .9rem; font-size: 0.88rem; }
       .page-title { padding: .8rem 1rem 0; }
@@ -352,11 +352,14 @@
     }
 
     /* ── Preview area ── */
-    .preview-col {
-      position: sticky;
-      top: 24px;
-      max-height: calc(100vh - 48px);
-      overflow-y: auto;
+    .preview-col { /* base: scrolls normally on mobile */ }
+    @media (min-width: 821px) {
+      .preview-col {
+        position: sticky;
+        top: 24px;
+        max-height: calc(100vh - 48px);
+        overflow-y: auto;
+      }
     }
     .qr-stage {
       display: flex; align-items: center; justify-content: center;
@@ -739,7 +742,7 @@
 
 </div><!-- /main -->
 
-<footer>&copy; <a href="https://sambarbeau.com" style="color:inherit;">Sam Barbeau</a> · MIT · Built with <a href="https://github.com/kozakdenys/qr-code-styling" style="color:inherit;">qr-code-styling</a></footer>
+<footer>Built with <a href="https://github.com/kozakdenys/qr-code-styling" style="color:inherit;">qr-code-styling</a></footer>
 
 <script>
 // ── Shorthand ──────────────────────────────────────────────
